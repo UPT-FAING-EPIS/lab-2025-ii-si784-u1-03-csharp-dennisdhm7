@@ -1,0 +1,55 @@
+name: Publish Documentation
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Descargar el código del repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Instalar .NET 9
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+
+      # 3️⃣ Instalar DocFX
+      - name: Install DocFX
+        run: |
+          dotnet tool install -g docfx
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      # 4️⃣ Generar metadatos
+      - name: Generate metadata
+        run: docfx metadata docfx.json
+        working-directory: ./Bank
+
+      # 5️⃣ Compilar documentación
+      - name: Build documentation
+        run: docfx build
+        working-directory: ./Bank
+
+      # 🧹 5.5 Limpiar branch gh-pages (previene error de referencia bloqueada)
+      - name: Reset gh-pages branch
+        run: |
+          git fetch origin gh-pages || true
+          git push origin --delete gh-pages || true
+
+      # 6️⃣ Publicar en GitHub Pages
+      - name: Publish documentation to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./Bank/_site
+          publish_branch: gh-pages
+          force_orphan: true
+          destination_dir: docs
+          full_commit_message: "📘 Updated documentation site via DocFX"
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
